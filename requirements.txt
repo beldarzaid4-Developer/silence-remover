@@ -1,0 +1,9 @@
+# Only needed to BUILD the .app or run from source.
+# The packaged .app needs nothing installed by the end user - ffmpeg is
+# bundled and the GUI uses only the Python standard library (tkinter).
+
+pyinstaller>=6.0
+
+# Optional: enables real OS-level drag-and-drop onto the app window.
+# Without it, the Browse... button still works fine.
+tkinterdnd2>=0.3.0
