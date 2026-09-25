@@ -1,0 +1,53 @@
+name: Build & Test macOS Intel App
+
+on:
+  push:
+  workflow_dispatch:
+
+jobs:
+  build-macos-intel:
+    # macos-13 is GitHub's last Intel (x86_64) runner generation.
+    # macos-14+ runners are Apple Silicon and would cross the "not Apple
+    # Silicon" requirement even with -x86_64 flags, so this pin is load-bearing.
+    runs-on: macos-13
+
+    steps:
+      - name: Check out repo
+        uses: actions/checkout@v4
+
+      - name: Confirm runner is really x86_64
+        run: |
+          uname -a
+          if [[ "$(uname -m)" != "x86_64" ]]; then
+            echo "This runner is not x86_64 - aborting." >&2
+            exit 1
+          fi
+
+      - name: Build app + run end-to-end self-test
+        run: |
+          chmod +x build_macos.sh
+          ./build_macos.sh
+
+      - name: Smoke-test a normal GUI launch (not just --selftest)
+        run: |
+          open dist/DeadAirRemover.app
+          sleep 5
+          if pgrep -f "DeadAirRemover" > /dev/null; then
+            echo "App is running after a normal launch - OK."
+          else
+            echo "App did not stay running after a normal launch!" >&2
+            exit 1
+          fi
+          pkill -f "DeadAirRemover" || true
+
+      - name: Package the .app for download (ditto preserves permissions/signature)
+        run: |
+          mkdir -p out
+          ditto -c -k --keepParent dist/DeadAirRemover.app out/DeadAirRemover-macOS-Intel.zip
+
+      - name: Upload build artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: DeadAirRemover-macOS-Intel
+          path: out/DeadAirRemover-macOS-Intel.zip
+          retention-days: 30
